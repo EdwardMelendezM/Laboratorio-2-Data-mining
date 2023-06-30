@@ -1,0 +1,458 @@
+---
+title: "Proyecto de Titanic - Mineria de datos"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+---
+
+# MINERIA DE DATOS CON EL DATASET TITANIC
+
+![TITANIC](images/titanic.webp)
+
+## ANALISIS DE COLUMNAS TEXTUALMENTE
+
+```{r}
+
+# PassengerId: Identificación del pasajero.
+# Survived: Indicador de si el pasajero sobrevivió (1) o no (0).
+# Pclass: Clase en la que viajaba el pasajero (1, 2 o 3).
+# Name: Nombre del pasajero.
+# Sex: Género del pasajero (male o female).
+# Age: Edad del pasajero.
+# SibSp: Número de hermanos o cónyuges a bordo.
+# Parch: Número de padres o hijos a bordo.
+# Ticket: Número de ticket.
+# Fare: Tarifa pagada por el pasajero.
+# Cabin: Número de cabina.
+# Embarked: Puerto de embarque (C = Cherbourg, Q = Queenstown, S = Southampton).
+
+```
+
+## Librerias
+
+```{r}
+library(cluster)
+library(ggplot2)
+library(factoextra)
+```
+
+### IMPORTACION DE DATOS
+
+```{r}
+# Ruta del archivo CSV
+path <- "../data/raw/train.csv"
+dataset <- read.csv(path)
+dataset_original <- read.csv(path)
+
+# Mostrar las primeras 5 filas del dataset
+head(dataset, n = 5)
+```
+
+## Análisis exploratorio de datos
+
+### Tamaño y nombres de columnas
+
+```{r}
+# Tamaño del dataset
+print(dim(dataset))
+
+# Nombres de las columnas
+print(colnames(dataset))
+```
+
+### Tamaño y nombres de columnas
+
+### Tipos de variables
+
+```{r}
+str(dataset)
+```
+
+### Estadísticas descriptivas
+
+```{r}
+# Estadísticas descriptivas
+summary(dataset)
+```
+
+## Análisis univariables
+
+### Variables numéricas
+
+```{r}
+# Variables numéricas
+hist(dataset$Age)
+boxplot(dataset$Fare)
+```
+
+### Variables categóricas
+
+```{r}
+# Variables categóricas
+table(dataset$Survived)
+barplot(table(dataset$Survived))
+```
+
+## Análisis bivariable
+
+### Variables numéricas vs. numéricas
+
+```{r}
+# Variables numéricas vs. numéricas
+plot(dataset$Age, dataset$Fare)
+cor(dataset$Age, dataset$Fare)
+```
+
+### Variables categóricas vs. categóricas
+
+```{r}
+# Variables categóricas vs. categóricas
+table(dataset$Survived, dataset$Sex)
+chisq.test(dataset$Survived, dataset$Sex)
+```
+
+### Variables numéricas vs. categóricas
+
+```{r}
+# Variables numéricas vs. categóricas
+boxplot(dataset$Age ~ dataset$Survived)
+t.test(dataset$Fare ~ dataset$Survived)
+```
+
+## Análisis multivariable
+
+### Análisis de correlación múltiple
+
+```{r}
+# Eliminar filas o columnas con valores faltantes
+dataset <- na.omit(dataset[, c("Age", "Fare", "SibSp", "Parch")])
+
+# Calcular la matriz de correlación
+correlation_matrix <- cor(dataset)
+
+# Generar el mapa de calor
+heatmap(correlation_matrix)
+```
+
+### Gráficos de dispersión múltiple
+
+```{r}
+# Gráficos de dispersión múltiple
+pairs(dataset[, c("Age", "Fare", "SibSp", "Parch")])
+
+```
+
+## Análisis de agrupamiento
+
+```{r}
+# Eliminar filas con valores faltantes
+kmeans_data <- na.omit(dataset)
+
+# Verificar y eliminar valores infinitos si es necesario
+kmeans_data <- kmeans_data[is.finite(rowSums(kmeans_data)), ]
+
+# Realizar análisis de agrupamiento k-means
+kmeans_result <- kmeans(kmeans_data, centers = 3)
+
+# Visualizar resultados
+plot_kmeans <- fviz_cluster(kmeans_result, data = kmeans_data, geom = "point")
+plot_kmeans
+```
+
+## Visualización de datos
+
+### Gráfico de barras
+
+```{r}
+# Gráfico de barras
+dataset=dataset_original
+grafico_barras <- ggplot(dataset, aes(x = Survived)) +
+  geom_bar()
+#ggsave("..//grafico_barras_survived.png", plot = grafico_barras)
+grafico_barras
+```
+
+### Gráfico de dispersión
+
+```{r}
+# Gráfico de dispersión
+grafico_dispersion <- ggplot(dataset, aes(x = Age, y = Fare)) +
+  geom_point()
+ggsave("results/grafico_dispersion_age_fare.png", plot = grafico_dispersion)
+grafico_dispersion
+```
+
+### Gráfico de correlación
+
+```{r}
+# Gráfico de correlación
+grafico_correlacion <- ggplot(dataset, aes(x = Age, y = Fare, color = Survived)) +
+  geom_point()
+ggsave("results/grafico_correlacion_age_fare_survived.png", plot = grafico_correlacion)
+grafico_correlacion
+```
+
+# LIMPIEZA DE DATOS
+
+En esta etapa, realizaremos la limpieza y preprocesamiento de los datos del dataset Titanic.
+
+## Importación de Datos
+
+```{r}
+# Ruta del archivo CSV
+path <- "../data/raw/train.csv"
+dataset <- read.csv(path)
+
+# Mostrar las primeras 5 filas del dataset
+head(dataset, n = 5)
+```
+
+### Verificación de Datos Faltantes
+
+```{r}
+# Verificar si hay valores faltantes en cada columna
+colSums(is.na(dataset))
+
+# Contar el número total de valores faltantes
+sum(is.na(dataset))
+```
+
+En este caso, utilizaremos el método de eliminación de filas que contienen valores faltantes y la imputación de la variable "Age" con la media de los valores existentes.
+
+```{r}
+# Eliminar filas con valores faltantes
+dataset <- dataset[complete.cases(dataset), ]
+
+# Imputar valores faltantes con la media de la variable "Age"
+dataset$Age <- ifelse(is.na(dataset$Age), mean(dataset$Age, na.rm = TRUE), dataset$Age)
+```
+
+### Eliminación de Columnas Irrelevantes
+
+```{r}
+# Eliminar las columnas irrelevantes
+dataset <- subset(dataset, select = -c(PassengerId, Name, Ticket, Cabin))
+```
+
+### Identificación y Tratamiento de Valores Atípicos
+
+```{r}
+# Identificar valores atípicos en la variable "Age" utilizando el método de los límites Tukey
+Q1_age <- quantile(dataset$Age, 0.25)
+Q3_age <- quantile(dataset$Age, 0.75)
+IQR_age <- Q3_age - Q1_age
+upper_bound_age <- Q3_age + 1.5 * IQR_age
+lower_bound_age <- Q1_age - 1.5 * IQR_age
+
+# Eliminar valores atípicos en la variable "Age"
+dataset <- dataset[dataset$Age < upper_bound_age & dataset$Age > lower_bound_age, ]
+
+# Reemplazar valores atípicos en la variable "Age" con el límite superior
+dataset$Age <- ifelse(dataset$Age > upper_bound_age, upper_bound_age, dataset$Age)
+
+# Reemplazar valores atípicos en la variable "Age" con el límite inferior
+dataset$Age <- ifelse(dataset$Age < lower_bound_age, lower_bound_age, dataset$Age)
+
+# Identificar valores atípicos en la variable "Fare" utilizando el método de los límites Tukey
+Q1_fare <- quantile(dataset$Fare, 0.25)
+Q3_fare <- quantile(dataset$Fare, 0.75)
+IQR_fare <- Q3_fare - Q1_fare
+upper_bound_fare <- Q3_fare + 1.5 * IQR_fare
+lower_bound_fare <- Q1_fare - 1.5 * IQR_fare
+
+# Eliminar valores atípicos en la variable "Fare"
+dataset <- dataset[dataset$Fare < upper_bound_fare & dataset$Fare > lower_bound_fare, ]
+
+# Reemplazar valores atípicos en la variable "Fare" con el límite superior
+dataset$Fare <- ifelse(dataset$Fare > upper_bound_fare, upper_bound_fare, dataset$Fare)
+
+# Reemplazar valores atípicos en la variable "Fare" con el límite inferior
+dataset$Fare <- ifelse(dataset$Fare < lower_bound_fare, lower_bound_fare, dataset$Fare)
+```
+
+### Normalización de Datos
+
+La normalización de los datos es una etapa importante para asegurar que todas las variables tengan un rango comparable.
+
+```{r}
+# Normalizar los datos
+normalized_data <- as.data.frame(scale(dataset[, c("Age", "Fare")]))
+
+# Agregar las columnas normalizadas al dataset original
+dataset[, c("Age", "Fare")] <- normalized_data
+```
+
+### Conversión de Datos Categóricos
+
+```{r}
+# Binarizar la columna "Sex"
+dataset$Sex <- ifelse(dataset$Sex == "male", 1, 0)
+
+# Convertir valores de la columna "Embarked" en numéricos
+dataset$Embarked <- as.numeric(factor(dataset$Embarked, levels = c("S", "C", "Q")))
+```
+
+### Guardar el Dataset Procesado
+
+```{r}
+# Ruta del archivo CSV procesado
+path_clean <- "../data/processed/dataset_clean.csv"
+
+# Guardar el dataset procesado
+# write.csv(dataset, file = path_clean, row.names = FALSE)
+
+```
+
+# Entrenamiento y Evaluación de Modelos
+
+En esta etapa, realizaremos el entrenamiento y la evaluación de varios modelos de aprendizaje automático utilizando el dataset procesado del Titanic.
+
+## Importación de Datos
+
+Importamos los datos de entrenamiento
+
+```{r}
+library(tidyverse)
+library(caret)
+# Importar data
+path <- "../data/proceseed/dataset_clean_train.csv"
+dataset_train <- read.csv(path)
+dataset_train <- as_tibble(dataset)
+train_index <- createFolds(dataset_train$Survived, k = 10)
+dataset_train
+```
+
+Importamos los datos de prueba
+
+```{r}
+# Importar data
+path <- "../data/proceseed/dataset_clean_test.csv"
+dataset_test <- read.csv(path)
+dataset_test <- as_tibble(dataset)
+dataset_test
+```
+
+# Arbol de Inferencia Condicional (Arbol de decision)
+
+```{r}
+# Árbol de Inferencia Condicional (Árbol de Decisión)
+ctreeFit <- dataset_train %>% train(Survived ~ .,
+                                   method = "ctree",
+                                   data = .,
+                                    tuneLength = 5,
+                                   trControl = trainControl(method = "cv", indexOut = train_index))
+ctreeFit
+plot(ctreeFit$finalModel)
+```
+
+# K-Vecinos más Cercanos (KNN)
+
+```{r}
+# K-Vecinos más Cercanos (KNN)
+knnFit <- dataset_train %>% train(Survived ~ .,
+                                  method = "knn",
+                                  data = .,
+                                  preProcess = "scale",
+                                  tuneLength = 5,
+                                  tuneGrid = data.frame(k = 1:10),
+                                  trControl = trainControl(method = "cv", indexOut = train_index))
+knnFit
+knnFit$finalModel
+```
+
+# Máquinas de Soporte Vectorial Lineal (SVM)
+
+```{r}
+# Máquinas de Soporte Vectorial Lineal (SVM)
+svmFit <- dataset_train %>% train(Survived ~ .,
+                              method = "svmLinear",
+                              data = .,
+                              tuneLength = 5,
+                              trControl = trainControl(method = "cv", indexOut = train_index))
+svmFit
+svmFit$finalModel
+```
+
+# Random Forest
+
+```{r}
+# Random Forest
+randomForestFit <- dataset_train %>% train(Survived ~ .,
+                                       method = "rf",
+                                       data = .,
+                                       tuneLength = 5,
+                                       trControl = trainControl(method = "cv", indexOut = train_index))
+randomForestFit
+randomForestFit$finalModel
+```
+
+# Gradient Boosted Decision Trees (xgboost)
+
+```{r}
+# Gradient Boosted Decision Trees (xgboost)
+xgboostFit <- dataset_train %>% train(Survived ~ .,
+                                  method = "xgbTree",
+                                  data = .,
+                                  tuneLength = 5,
+                                  trControl = trainControl(method = "cv", indexOut = train_index),
+                                  tuneGrid = expand.grid(
+                                    nrounds = 20,
+                                    max_depth = 3,
+                                    colsample_bytree = .6,
+                                    eta = 0.1,
+                                    gamma=0,
+                                    min_child_weight = 1,
+                                    subsample = .5
+                                  ))
+xgboostFit
+xgboostFit$finalModel
+```
+
+# Red Neuronal Artificial (ANN)
+
+```{r}
+# Red Neuronal Artificial (ANN)
+nnetFit <- dataset_train %>% train(Survived ~ .,
+                               method = "nnet",
+                               data = .,
+                               tuneLength = 5,
+                               trControl = trainControl(method = "cv", indexOut = train_index),
+                               trace = FALSE)
+nnetFit
+nnetFit$finalModel
+```
+
+# Comparación de Modelos
+
+```{r}
+# Comparación de modelos
+resamps <- resamples(list(
+  ctree = ctreeFit,
+  SVM = svmFit,
+  KNN = knnFit,
+  randomForest = randomForestFit,
+  xgboost = xgboostFit,
+  NeuralNet = nnetFit
+))
+summary(resamps)
+bwplot(resamps, layout = c(3, 1))
+```
+
+# Evaluación del Modelo Elegido en los Datos de Prueba
+
+```{r}
+# Convertir la variable objetivo en factor con los mismos niveles
+dataset_test$Survived <- factor(dataset_test$Survived)
+
+# Realizar predicciones en los datos de prueba utilizando el modelo elegido
+pr <- predict(knnFit, newdata = dataset_test)
+
+# Convertir las predicciones y la variable objetivo a factores con los mismos niveles
+pr <- factor(pr, levels = levels(dataset_test$Survived))
+reference <- factor(dataset_test$Survived, levels = levels(dataset_test$Survived))
+
+# Calcular la matriz de confusión
+confusionMatrix(pr, reference = reference)
+
+```

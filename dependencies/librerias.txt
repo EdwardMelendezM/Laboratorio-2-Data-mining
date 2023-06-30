@@ -5,3 +5,7 @@ cluster
 factoextra
 caret
 lattice
+RWeka
+caret
+tidyverse
+keras
